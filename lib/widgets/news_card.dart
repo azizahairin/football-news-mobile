@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:football_news/screens/newslist_form.dart';
 import 'package:football_news/screens/menu.dart';
+import 'package:football_news/screens/news_entry_list.dart'; 
+import 'package:football_news/screens/login.dart';
+import 'package:pbp_django_auth/pbp_django_auth.dart';
+import 'package:provider/provider.dart';
 
 class ItemCard extends StatelessWidget {
   final ItemHomepage item;
@@ -9,23 +13,56 @@ class ItemCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final request = context.watch<CookieRequest>(); 
+
     return Material(
       color: Theme.of(context).colorScheme.secondary,
       borderRadius: BorderRadius.circular(12),
       child: InkWell(
         // Area responsif terhadap sentuhan
-        onTap: () {
+        onTap: () async { // <-- DIUBAH ke async
           // Memunculkan SnackBar ketika diklik
           ScaffoldMessenger.of(context)
             ..hideCurrentSnackBar()
-            ..showSnackBar(SnackBar(
-                content: Text("Kamu telah menekan tombol ${item.name}!")));
+            ..showSnackBar(
+              SnackBar(content: Text("Kamu telah menekan tombol ${item.name}!")),
+            );
 
           if (item.name == "Add News") {
             Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => const NewsFormPage()),
             );
+          }
+          else if (item.name == "See Football News") {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => const NewsEntryListPage(),
+              ),
+            );
+          }
+          else if (item.name == "Logout") {
+            final response = await request.logout(
+              "http://localhost:8000/auth/logout/",
+            );
+            String message = response["message"];
+            if (context.mounted) {
+              if (response['status']) {
+                String uname = response["username"];
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text("$message See you again, $uname.")),
+                );
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (context) => const LoginPage()),
+                );
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(message)),
+                );
+              }
+            }
           }
         },
         child: Container(

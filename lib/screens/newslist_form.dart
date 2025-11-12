@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:football_news/widgets/left_drawer.dart';
+import 'dart:convert'; // <-- sudah sesuai tutorial
+import 'package:provider/provider.dart'; // <-- sudah sesuai tutorial
+import 'package:pbp_django_auth/pbp_django_auth.dart'; // <-- sudah sesuai tutorial
+import 'package:football_news/screens/menu.dart'; // <-- sudah sesuai tutorial
 
 class NewsFormPage extends StatefulWidget {
   const NewsFormPage({super.key});
@@ -27,13 +31,15 @@ class _NewsFormPageState extends State<NewsFormPage> {
 
   @override
   Widget build(BuildContext context) {
+    final request = context.watch<CookieRequest>(); // <-- ditambahkan koneksi CookieRequest
+
     return Scaffold(
       appBar: AppBar(
         title: const Center(child: Text('Form Tambah Berita')),
         backgroundColor: Colors.indigo,
         foregroundColor: Colors.white,
       ),
-      drawer: LeftDrawer(),
+      drawer: const LeftDrawer(),
       body: Form(
         key: _formKey,
         child: SingleChildScrollView(
@@ -160,43 +166,40 @@ class _NewsFormPageState extends State<NewsFormPage> {
                     style: ButtonStyle(
                       backgroundColor: MaterialStateProperty.all(Colors.indigo),
                     ),
-                    onPressed: () {
+                    onPressed: () async {
                       if (_formKey.currentState!.validate()) {
-                        showDialog(
-                          context: context,
-                          builder: (context) {
-                            return AlertDialog(
-                              title: const Text('Produk berhasil tersimpan'),
-                              content: SingleChildScrollView(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text('Judul: $_title'),
-                                    const SizedBox(height: 8.0),
-                                    Text('Isi: $_content'),
-                                    const SizedBox(height: 8.0),
-                                    Text('Kategori: $_category'),
-                                    const SizedBox(height: 8.0),
-                                    Text('Thumbnail: $_thumbnail'),
-                                    const SizedBox(height: 8.0),
-                                    Text(
-                                      'Unggulan: ${_isFeatured ? "Ya" : "Tidak"}',
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              actions: [
-                                TextButton(
-                                  child: const Text('OK'),
-                                  onPressed: () {
-                                    Navigator.pop(context);
-                                  },
-                                ),
-                              ],
-                            );
-                          },
+                        final response = await request.postJson(
+                          "http://localhost:8000/create-flutter/",
+                          jsonEncode({
+                            "title": _title,
+                            "content": _content,
+                            "thumbnail": _thumbnail,
+                            "category": _category,
+                            "is_featured": _isFeatured,
+                          }),
                         );
-                        _formKey.currentState!.reset();
+
+                        if (context.mounted) {
+                          if (response['status'] == 'success') {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text("News successfully saved!"),
+                              ),
+                            );
+                            Navigator.pushReplacement(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => MyHomePage(),
+                              ),
+                            );
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text("Something went wrong, please try again."),
+                              ),
+                            );
+                          }
+                        }
                       }
                     },
                     child: const Text(
